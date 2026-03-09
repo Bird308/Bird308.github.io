@@ -1,0 +1,380 @@
+# 用Python生成并保存清粉检测器的HTML文件
+def create_qingfen_html():
+    # 完整的HTML代码（用三引号包裹，避免转义问题）
+    html_content = '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清粉检测器</title>
+ <!-- 新增的小字行 -->
+    <p style="font-size: 14px; color: #666; margin-bottom: 20px;">载湉小丑，未辨菽麦————章太炎</p>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .page {
+            display: none;
+            text-align: center;
+        }
+        .page.active {
+            display: block;
+        }
+        h1 {
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        h2 {
+            margin: 20px 0;
+            color: #34495e;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .question {
+            margin: 30px 0;
+            text-align: left;
+        }
+        .options {
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .option {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .option:hover {
+            background: #f0f8ff;
+        }
+        .option.selected {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .result-card {
+            padding: 20px;
+            margin: 20px 0;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 欢迎页 -->
+        <div id="welcome-page" class="page active">
+            <h1>清粉检测器</h1>
+            <p>通过几道趣味问题，检测你的「清粉指数」！</p>
+            <button class="btn" onclick="goToQuestionPage()">开始测试</button>
+        </div>
+
+        <!-- 答题页 -->
+        <div id="question-page" class="page">
+            <h2 id="question-title">题目加载中...</h2>
+            <div class="options" id="options-container"></div>
+            <button class="btn" id="next-btn" onclick="nextQuestion()" disabled>下一题</button>
+            <p id="progress">第 1/20 题</p>
+        </div>
+
+        <!-- 结果页 -->
+        <div id="result-page" class="page">
+            <h1>你的测试结果</h1>
+            <div class="result-card">
+                <p>你的清粉指数：</p>
+                <div class="score" id="final-score">0</div>
+                <p id="result-desc"></p>
+            </div>
+            <button class="btn" onclick="restartTest()">重新测试</button>
+        </div>
+    </div>
+
+    <script>
+        // 测试题目数据（修复中文逗号、删除重复题目）
+        const questions = [
+            {
+                title: "你认为清朝是否是中国古代最强盛的封建王朝？",
+                options: [
+                    { text: "是，人口和领土都是旷世未有", score: 5 },
+                    { text: "否，在横向对比维度，清朝开始落后于世界", score: -5 }
+                ]
+            },
+            {
+                title: "你对康乾盛世的描述是否认可",
+                options: [
+                    { text: "认可，人口突破三亿，百姓负担低，轻徭薄赋", score: 5 },
+                    { text: "不认可，起义连绵不绝，绝大多数人生活在生死线上", score: -5 }
+                ]
+            },
+            {
+                title: "你认为清朝的人口滋生和清王朝的制度、君主水平是否有关",
+                options: [
+                    { text: "是，清朝皇帝尊重儒家伦理，强调以民为本，各项制度都是按此方针制定执行", score: 5 },
+                    { text: "否，主要还是生产力自身的提升，和清朝皇帝的主观意志没什么关系", score: -5 }
+                ]
+            },
+            {
+                title: "你是否认为现代中国的版图是清朝奠定的（或者清朝领土贡献论）？",
+                options: [
+                    { text: "是，清朝是第一个用威斯特伐利亚体系奠定领土基础的王朝，对于边区的实控比起历朝历代显著增强", score: 5 },
+                    { text: "否，中国的版图法理是自古以来而非自清以来，现代实际领土是人民解放军一寸寸打下来的", score: -5 }
+                ]
+            },
+            {
+                title: "你是否认为清承明制，清朝的弊病并不存在显著特殊性，而是前朝的锅？",
+                options: [
+                    { text: "认可，清朝的各种制度都是延续明朝，有问题也是明朝或以前的封建王朝的锅", score: 5 },
+                    { text: "不认可，清朝明面上延用明制，但实际上大肆篡改，例如在民族问题上存在显著歧视等等，这些都是前朝没有的", score: -5 }
+                ]
+            },
+            {
+                title: "《红楼梦》的作者是洪升或曹寅，具有反清思想，你对此观点的态度是？",
+                options: [
+                    { text: "不认可，索隐派喜欢牵强附会", score: 5 },
+                    { text: "认可/不绝对排斥，胡适那些民国大师的水平好不到哪去", score: -5 }
+                ]
+            },
+            {
+                title: "明朝皇帝普遍怠惰，清朝皇帝普遍亲政",
+                options: [
+                    { text: "认可", score: 5 },
+                    { text: "不认可", score: -5 }
+                ]
+            },
+            {
+                title: "乾隆的十全武功充分体现出其超越明朝历代皇帝的军事水准？",
+                options: [
+                    { text: "是", score: 5 },
+                    { text: "否", score: -5 }
+                ]
+            },
+            {
+                title: "乾隆编纂《四库全书》是一场对文化的浩劫，危害性远大于所谓的'焚书坑儒'",
+                options: [
+                    { text: "认可", score: -5 },
+                    { text: "不认可", score: 5 }
+                ]
+            },
+            {
+                title: "你是否认为明朝的识字率要高于清朝？",
+                options: [
+                    { text: "认可，明朝民间讲学风气浓厚，小说井喷", score: -5 },
+                    { text: "不认可，文字狱就是明朝的特色，文官集团动不动挨板子", score: 5 }
+                ]
+            },
+            {
+                title: "你对晚清的普遍印象",
+                options: [
+                    { text: "具有进取精神，洋务运动、戊戌变法、清末新政展现出对西方先进科技思想的追求，打破了传统王朝的天朝上国心态", score: 5 },
+                    { text: "丧权辱国，各种条约数不胜数，连日本这种刚刚工业化起步的农业国都打不过，识字率不到1%，简直凄凄惨惨戚戚", score: -5 }
+                ]
+            },
+            {
+                title: "清朝对台湾的综合治理水平远高于明朝",
+                options: [
+                    { text: "认可", score: 5 },
+                    { text: "不认可", score: -5 }
+                ]
+            },
+            {
+                title: "你对'中兴名臣'曾左李胡的态度",
+                options: [
+                    { text: "平定太平天国，戡乱有功，推行洋务，为晚清续命50年，功大于过", score: 5 },
+                    { text: "刽子手，残酷镇压农民起义，心理扭曲，这也叫名臣？", score: -5 }
+                ]
+            },
+            {
+                title: "康熙的永不加赋是————",
+                options: [
+                    { text: "善政，减免农民的负担，历朝历代闻所未闻，真是仁德之君", score: 5 },
+                    { text: "华而不实，博美名罢了，当时即使不加税原本的赋税就高得离谱", score: -5 }
+                ]
+            },
+            {
+                title: "清朝的统治核心与宋明汉唐等传统封建王朝有明显区别",
+                options: [
+                    { text: "不认可，不都是皇权和士绅大地主为基础吗？", score: 5 },
+                    { text: "认可，清朝本质就是套着封建王朝的以马治人模式，关外马队才是治理核心", score: -5 }
+                ]
+            },
+            {
+                title: "如果明朝能撑到1840年，它面对列强的表现能明显优于清朝",
+                options: [
+                    { text: "认可，明朝和清朝本来就是两套治理模式，明朝对于工业化、近代化的制约要显著小于清朝", score: -5 },
+                    { text: "不认可，明清都是封建王朝，封建社会一个样，都必然落后于以资本主义为主的列强", score: 5 }
+                ]
+            },
+            {
+                title: "对于戊戌变法的态度",
+                options: [
+                    { text: "救亡图存的伟大尝试，打破数千年传统文化的桎梏，学习西方先进的思想制度，虽败犹荣", score: 5 },
+                    { text: "本质和清末新政一样是清朝为维护统治的被迫尝试，是光绪等皇族为了夺权的自私目的而支持的", score: -5 }
+                ]
+            },
+            {
+                title: "关于清朝灭亡的原因，你更认可",
+                options: [
+                    { text: "清朝统治者或多或少接触到近代思想，对民间的革命反抗运动存有一定同情，打压力度较之历代王朝要轻，因此革命党的几率更大", score: 5 },
+                    { text: "清末已经烂到根里了，除了少数既得利益者，包括革命党等绝大多数人都支持反清运动，连北洋军都反水", score: -5 }
+                ]
+            },
+            {
+                title: "乾隆五次蠲免钱粮是什么？",
+                options: [
+                    { text: "善政！为农民减轻负担，说明清朝皇帝早已放弃满洲本位，学习孔老夫子的文化", score: 5 },
+                    { text: "文字游戏！本质是A省蠲免由B省增派，没有任何实际实惠", score: -5 }
+                ]
+            },
+            {
+                title: "清朝比起明朝",
+                options: [
+                    { text: "更开放，清代的外销瓷遍地都是，也没有真正海禁，不像明朝寸板不得下海。清末更是与各国正式建交，这压根就是个现代国家", score: 5 },
+                    { text: "更蔽塞，清代的外交基本都是做做样子，以天朝上国的姿态故步自封，晚清被迫通商是清政府的耻辱，有什么好吹的？", score: -5 }
+                ]
+            }
+        ];
+
+        // 全局变量
+        let currentQuestionIndex = 0;
+        let totalScore = 0;
+        let selectedOption = null;
+
+        // 页面切换函数
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        // 进入答题页
+        function goToQuestionPage() {
+            showPage('question-page');
+            loadQuestion(currentQuestionIndex);
+        }
+
+        // 加载题目
+        function loadQuestion(index) {
+            const question = questions[index];
+            const titleEl = document.getElementById('question-title');
+            const optionsEl = document.getElementById('options-container');
+            const progressEl = document.getElementById('progress');
+            const nextBtn = document.getElementById('next-btn');
+
+            // 重置状态
+            selectedOption = null;
+            nextBtn.disabled = true;
+            optionsEl.innerHTML = '';
+
+            // 设置题目和进度
+            titleEl.textContent = `${index + 1}. ${question.title}`;
+            progressEl.textContent = `第 ${index + 1}/${questions.length} 题`;
+
+            // 生成选项
+            question.options.forEach(option => {
+                const optEl = document.createElement('div');
+                optEl.className = 'option';
+                optEl.textContent = option.text;
+                optEl.dataset.score = option.score;
+
+                optEl.onclick = function() {
+                    // 取消其他选中
+                    document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+                    // 选中当前
+                    this.classList.add('selected');
+                    selectedOption = Number(this.dataset.score);
+                    nextBtn.disabled = false;
+                };
+
+                optionsEl.appendChild(optEl);
+            });
+        }
+
+        // 下一题/提交
+        function nextQuestion() {
+            totalScore += selectedOption;
+
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion(currentQuestionIndex);
+            } else {
+                showResult();
+            }
+        }
+
+        // 显示结果（修复条件判断格式，优化分数区间）
+        function showResult() {
+            showPage('result-page');
+            const scoreEl = document.getElementById('final-score');
+            const descEl = document.getElementById('result-desc');
+
+            scoreEl.textContent = `${totalScore} 分`;
+
+            // 结果判断（总分范围 -100 ~ +100）
+            if (totalScore >= 75) {
+                descEl.textContent = "铁杆清粉！你对历史的了解有明显偏颇和粉圈心态，建议重新用第一性和唯物思想学习历史";
+            } else if (totalScore >= 25) {
+                descEl.textContent = "普通清粉！你对清朝有明显好感，并忽略其负面影响，但尚属常见历史学习误区，建议参考多方史料";
+            } else if (totalScore >= -25) {
+                descEl.textContent = "中立者！你对清朝并无明显好感，值得肯定！但并未发现清朝对近代落后在历史上具有特殊责任。这不全是你的问题，建议多采取纵向对比的思维";
+            } else if (totalScore >= -75) {
+                descEl.textContent = "反清！你对清朝的负面影响有较深的认识，值得肯定。希望再接再厉，进一步了解历史";
+            } else {
+                descEl.textContent = "极度反清！很有质疑精神，因为清朝对近代落后有不少特有的责任，例如以马治人、长期捕奴等。这些并非其他封建王朝的常态。当然也不应走向另一个极端，历史需要用唯物精神进行检验";
+            }
+        }
+
+        // 重新测试
+        function restartTest() {
+            currentQuestionIndex = 0;
+            totalScore = 0;
+            showPage('welcome-page');
+        }
+    </script>
+</body>
+</html>'''
+    
+    # 保存HTML文件（关键：指定utf-8编码，避免乱码和代码截断）
+    with open('qingfen.html', 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    print("HTML文件已生成！请在当前目录找到 qingfen.html，用浏览器打开。")
+
+# 执行函数生成文件
+create_qingfen_html()
